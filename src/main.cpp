@@ -201,38 +201,22 @@ void maxflow()
     raven::graph::sGraphData gd;
     gd.g.directed();
     for (auto &c : theCourts)
-    {
-        gd.g.add("src", c.myName);
         for (auto &t : theTasks)
-        {
             if (t.myt == c.myTime)
             {
+                // Game can be played on this court
                 gd.g.add(c.myName, t.myName);
-                gd.g.add(t.myName, "snk");
             }
-        }
-    }
 
-    // apply the maxflow algorithm
-    gd.startName = "src";
-    gd.endName = "snk";
-    gd.edgeWeight.resize(gd.g.edgeCount(), 1);
-    std::vector<int> vEdgeFlow(gd.g.edgeCount(), 0);
-    raven::graph::flows(gd, vEdgeFlow);
+    // apply the maxflow algorithm, allocating games to courts
+    auto ga = raven::graph::alloc(gd);
 
     // display game schedule
     std::cout << "\nGame Schedule\n";
-    for (int ei = 0; ei < vEdgeFlow.size(); ei++)
+    for (int ei = 0; ei < ga.edgeCount(); ei++)
     {
-        if (vEdgeFlow[ei])
-        {
-            auto s = gd.g.userName(gd.g.src(ei));
             auto t = gd.g.userName(gd.g.dest(ei));
-            if (s == "src" || t == "snk")
-                continue;
-
             theTasks[atoi(t.substr(4).c_str())].display();
-        }
     }
 }
 main()
