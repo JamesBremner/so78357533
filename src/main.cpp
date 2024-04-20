@@ -5,6 +5,8 @@
 #include <vector>
 #include <algorithm>
 
+#include <GraphTheory.h>
+
 class cPlayer
 {
 public:
@@ -36,8 +38,10 @@ class cCourt
 {
 public:
     int myTime;
-    cCourt(int t)
-        : myTime(t)
+    std::string myName;
+    cCourt(const std::string &name, int t)
+        : myName(name),
+          myTime(t)
     {
     }
 };
@@ -48,20 +52,27 @@ public:
     cPlayer &p1;
     cPlayer &p2;
     int myt;
+    cCourt &myCourt;
+    std::string myName;
     cTask(
         cPlayer &a,
         cPlayer &b,
-        int t)
+        int t,
+        cCourt &c)
         : p1(a),
           p2(b),
-          myt(t)
+          myt(t),
+          myCourt(c)
     {
+        myName = nextName();
     }
     void display();
     static void displayAll();
-    static bool find( 
-        const std::string& p1,
-         const std::string& p2);
+    static bool find(
+        const std::string &p1,
+        const std::string &p2);
+    static std::string nextName();
+    static cTask &get(int index);
 };
 
 std::vector<cPlayer> thePlayers;
@@ -76,16 +87,24 @@ void cTask::displayAll()
     }
 }
 
- bool cTask::find( const std::string& p1n, const std::string& p2n )
- {
+bool cTask::find(const std::string &p1n, const std::string &p2n)
+{
     for (auto &t : theTasks)
-        if( t.p1.myName == p1n && t.p2.myName == p2n )
+        if (t.p1.myName == p1n && t.p2.myName == p2n)
             return true;
     return false;
- }
+}
+std::string cTask::nextName()
+{
+    return "task" + std::to_string(theTasks.size());
+}
 void cTask::display()
 {
-    std::cout << p1.myName << " v " << p2.myName << " at " << myt << "\n";
+    std::cout << p1.myName
+              << " v " << p2.myName
+              << " at " << myt
+              << " on " << myCourt.myName
+              << "\n";
 }
 
 void generate1()
@@ -106,9 +125,9 @@ void generate1()
     thePlayers[1].addTime(3);
 
     // generate court times
-    theCourts.emplace_back(1);
-    theCourts.emplace_back(2);
-    theCourts.emplace_back(3);
+    theCourts.emplace_back("cA", 1);
+    theCourts.emplace_back("cA", 2);
+    theCourts.emplace_back("cA", 3);
 }
 int findPlayer(const std::string &name)
 {
@@ -157,11 +176,9 @@ void check()
 
                                 // create a task for each feasible pair
                                 // only record task when player 1 index less than player 2
-                                if (pi < oi) {
-
-
-
-                                    theTasks.emplace_back(p, thePlayers[oi], t);
+                                if (pi < oi)
+                                {
+                                    theTasks.emplace_back(p, thePlayers[oi], t, c);
                                 }
                             }
                         }
@@ -178,9 +195,50 @@ void check()
     std::cout << "found feasible opponents for all players\n";
     cTask::displayAll();
 }
+void maxflow()
+{
+    // setup the flow graph
+    raven::graph::sGraphData gd;
+    gd.g.directed();
+    for (auto &c : theCourts)
+    {
+        gd.g.add("src", c.myName);
+        for (auto &t : theTasks)
+        {
+            if (t.myt == c.myTime)
+            {
+                gd.g.add(c.myName, t.myName);
+                gd.g.add(t.myName, "snk");
+            }
+        }
+    }
+
+    // apply the maxflow algorithm
+    gd.startName = "src";
+    gd.endName = "snk";
+    gd.edgeWeight.resize(gd.g.edgeCount(), 1);
+    std::vector<int> vEdgeFlow(gd.g.edgeCount(), 0);
+    raven::graph::flows(gd, vEdgeFlow);
+
+    // display game schedule
+    std::cout << "\nGame Schedule\n";
+    for (int ei = 0; ei < vEdgeFlow.size(); ei++)
+    {
+        if (vEdgeFlow[ei])
+        {
+            auto s = gd.g.userName(gd.g.src(ei));
+            auto t = gd.g.userName(gd.g.dest(ei));
+            if (s == "src" || t == "snk")
+                continue;
+
+            theTasks[atoi(t.substr(4).c_str())].display();
+        }
+    }
+}
 main()
 {
     generate1();
     check();
+    maxflow();
     return 0;
 }
