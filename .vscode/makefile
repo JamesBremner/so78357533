@@ -21,12 +21,13 @@ CCflags = -std=c++17 $(OPT) -D_mingw_
 # sources
 OBJ_starter = \
 	$(ODIR)/main.o \
+	$(ODIR)/cTask.o \
 	$(ODIR)/cGraph.o \
 	$(ODIR)/GraphTheory.o \
 
 ### COMPILE
 
-$(ODIR)/%.o: %.cpp  
+$(ODIR)/%.o: %.cpp cTask.h
 	g++ $< \
 	-c -o $@  $(INCS) $(CCflags)
 
