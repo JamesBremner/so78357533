@@ -5,18 +5,19 @@
 #include <vector>
 #include <algorithm>
 
-class cTime
-{
-public:
-    int myTime;
-    int myPriority;
-    cTime(int t, int p)
-        : myTime(t),
-          myPriority(p)
-    {
-    }
-    static int priority(int t);
-};
+
+// class cTime
+// {
+// public:
+//     int myTime;
+//     int myPriority;
+//     cTime(int t, int p)
+//         : myTime(t),
+//           myPriority(p)
+//     {
+//     }
+//     static int priority(int t);
+// };
 
 class cPlayer
 {
@@ -37,7 +38,7 @@ public:
     {
         myTimes.push_back(t);
     }
-    
+
     void addOpp(const std::string &opp)
     {
         myOpps.push_back(opp);
@@ -87,7 +88,7 @@ public:
         const std::string &p2);
     static std::string nextName();
     static cGame &get(int index);
-    static void sortTimePriority();
+
 };
 
 class cClub
@@ -95,9 +96,15 @@ class cClub
 public:
     std::vector<cGame> myFeasibleGames;
     std::vector<int> myGames;       /// indices of the scheduled games
+    std::vector<std::pair<int,int>> myPriorityTimes;
 
     void generate1();
     void generate2();
+
+    void timePriority(int t, int p);
+    int priority( int t ) const;
+    void sortTimePriority();
+    
     void check();
     void maxflow();
     void checkPlayerGames();
@@ -106,5 +113,4 @@ public:
 
 extern std::vector<cPlayer> thePlayers;
 extern std::vector<cCourt> theCourts;
-extern std::vector<cTime> theTimes;
 extern cClub theClub;

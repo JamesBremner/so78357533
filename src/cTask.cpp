@@ -4,18 +4,10 @@
 
 std::vector<cPlayer> thePlayers;
 std::vector<cCourt> theCourts;
-std::vector<cTime> theTimes;
+
 cClub theClub;
 
-int cTime::priority(int t)
-{
-    for (auto &tc : theTimes)
-    {
-        if (tc.myTime == t)
-            return tc.myPriority;
-    }
-    return 0;
-}
+
 
      cGame::cGame()
     : myt( -1 )
@@ -61,17 +53,6 @@ void cGame::display()
               << " on " << myCourt->myName
               << "\n";
 }
-void cGame::sortTimePriority()
-{
-    std::sort(
-        theClub.myFeasibleGames.begin(), theClub.myFeasibleGames.end(),
-        [](const cGame &a, cGame &b)
-        {
-            int ap = cTime::priority(a.myt);
-            int bp = cTime::priority(b.myt);
-            return ap > bp;
-        });
-}
 
 void cClub::generate1()
 {
@@ -116,7 +97,29 @@ void cClub::generate2()
     theCourts.emplace_back("cA", 2);
 
     // set time priority
-    theTimes.emplace_back(2, 1);
+    theClub.timePriority( 2, 1 );
+}
+void cClub::timePriority( int t, int p )
+{
+    myPriorityTimes.emplace_back( std::make_pair(t,p));
+}
+int cClub::priority(int t) const
+{
+    for ( auto &tp : myPriorityTimes )
+    {
+        if (tp.first == t)
+            return tp.second;
+    }
+    return 0;
+}
+void cClub::sortTimePriority()
+{
+    std::sort(
+        myFeasibleGames.begin(), myFeasibleGames.end(),
+        [this](const cGame &a, cGame &b)
+        {
+            return this->priority(a.myt) > this->priority(b.myt);
+        });
 }
 int findPlayer(const std::string &name)
 {
@@ -188,7 +191,7 @@ void cClub::maxflow()
 {
     myGames.clear();
 
-    cGame::sortTimePriority();
+    sortTimePriority();
 
     // setup the flow graph
     raven::graph::sGraphData gd;
