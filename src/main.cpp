@@ -3,13 +3,15 @@
 main()
 {
     // generate problem
-    generate2();
+    theClub.generate2();
 
     // check feasibility
-    check();
+    theClub.check();
 
     // allocate matches using max flow algorithm
-    maxflow();
+    theClub.maxflow();
+
+    theClub.display();
 
     return 0;
 }

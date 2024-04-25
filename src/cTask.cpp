@@ -4,8 +4,8 @@
 
 std::vector<cPlayer> thePlayers;
 std::vector<cCourt> theCourts;
-std::vector<cTask> theTasks;
 std::vector<cTime> theTimes;
+cClub theClub;
 
 int cTime::priority(int t)
 {
@@ -17,26 +17,43 @@ int cTime::priority(int t)
     return 0;
 }
 
-void cTask::displayAll()
+     cGame::cGame()
+    : myt( -1 )
+    {
+    }
+     cGame::cGame(
+        cPlayer &a,
+        cPlayer &b,
+        int t,
+        cCourt &c)
+        : p1(&a),
+          p2(&b),
+          myt(t),
+          myCourt(&c)
+    {
+        myName = nextName();
+    }
+
+void cGame::displayAll()
 {
-    for (auto &t : theTasks)
+    for (auto &t : theClub.myFeasibleGames)
     {
         t.display();
     }
 }
 
-bool cTask::find(const std::string &p1n, const std::string &p2n)
+bool cGame::find(const std::string &p1n, const std::string &p2n)
 {
-    for (auto &t : theTasks)
+    for (auto &t : theClub.myFeasibleGames)
         if (t.p1->myName == p1n && t.p2->myName == p2n)
             return true;
     return false;
 }
-std::string cTask::nextName()
+std::string cGame::nextName()
 {
-    return "task" + std::to_string(theTasks.size());
+    return "task" + std::to_string(theClub.myFeasibleGames.size());
 }
-void cTask::display()
+void cGame::display()
 {
     std::cout << p1->myName
               << " v " << p2->myName
@@ -44,11 +61,11 @@ void cTask::display()
               << " on " << myCourt->myName
               << "\n";
 }
-void cTask::sortTimePriority()
+void cGame::sortTimePriority()
 {
     std::sort(
-        theTasks.begin(), theTasks.end(),
-        [](const cTask &a, cTask &b)
+        theClub.myFeasibleGames.begin(), theClub.myFeasibleGames.end(),
+        [](const cGame &a, cGame &b)
         {
             int ap = cTime::priority(a.myt);
             int bp = cTime::priority(b.myt);
@@ -56,7 +73,7 @@ void cTask::sortTimePriority()
         });
 }
 
-void generate1()
+void cClub::generate1()
 {
     // generate players
     thePlayers.emplace_back("pA");
@@ -78,7 +95,7 @@ void generate1()
     theCourts.emplace_back("cA", 2);
     theCourts.emplace_back("cA", 3);
 }
-void generate2()
+void cClub::generate2()
 {
     // generate players
     thePlayers.emplace_back("pA");
@@ -114,7 +131,7 @@ int findPlayer(const std::string &name)
  *
  * i.e. every player has at least one opponent with a matching available time and possible court time
  */
-void check()
+void cClub::check()
 {
     // loop over players
     int pi = -1;
@@ -150,7 +167,7 @@ void check()
                                 // only record task when player 1 index less than player 2
                                 if (pi < oi)
                                 {
-                                    theTasks.emplace_back(p, thePlayers[oi], t, c);
+                                    myFeasibleGames.emplace_back(p, thePlayers[oi], t, c);
                                 }
                             }
                         }
@@ -165,17 +182,19 @@ void check()
         }
     }
     std::cout << "found feasible opponents for all players\n";
-    cTask::displayAll();
+    cGame::displayAll();
 }
-void maxflow()
+void cClub::maxflow()
 {
-    cTask::sortTimePriority();
+    myGames.clear();
+
+    cGame::sortTimePriority();
 
     // setup the flow graph
     raven::graph::sGraphData gd;
     gd.g.directed();
     for (auto &c : theCourts)
-        for (auto &t : theTasks)
+        for (auto &t : myFeasibleGames)
             if (t.myt == c.myTime)
             {
                 // Game can be played on this court
@@ -185,11 +204,36 @@ void maxflow()
     // apply the maxflow algorithm, allocating games to courts
     auto ga = raven::graph::alloc(gd);
 
-    // display game schedule
-    std::cout << "\nGame Schedule\n";
     for (int ei = 0; ei < ga.edgeCount(); ei++)
+        myGames.push_back(atoi(gd.g.userName(gd.g.dest(ei))
+                                   .substr(4)
+                                   .c_str()));
+}
+
+void cClub::checkPlayerGames()
+{
+    for (auto &p : thePlayers)
+        p.myCountGames = 0;
+    for (int gi : myGames)
     {
-        auto t = gd.g.userName(gd.g.dest(ei));
-        theTasks[atoi(t.substr(4).c_str())].display();
+        auto &g = myFeasibleGames[gi];
+        if (g.p1->myCountGames == g.p1->myMaxGames ||
+            g.p2->myCountGames == g.p2->myMaxGames)
+            // one or both players are at their maximum games per week
+            // unschedule this game
+            g.myt = -1;
+        else
+        {
+            g.p1->myCountGames++;
+            g.p2->myCountGames++;
+        }
     }
+}
+
+void cClub::display()
+{
+    std::cout << "\nGame Schedule\n";
+    for (int gi : myGames)
+        if( myFeasibleGames[gi].myt>0 )
+            myFeasibleGames[gi].display();
 }
